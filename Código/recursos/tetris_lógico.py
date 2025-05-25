@@ -1,41 +1,53 @@
-matriz = [[0, 0, 0, 0, 0, 0, 0],
+bloque = 1
+
+matriz = [[8, 0, 0, 0, 0, 0, 0],
           [0, 0, 0, 0, 0, 0, 0],
-          [0, 0, 0, 0, 0, 0, 0],
-          [0, 0, 0, 1, 1, 1, 0],
+          [0, 0, bloque, 0, bloque, 0, 0],
+          [0, 0, bloque, bloque, bloque, 0, 0],
           [0, 0, 0, 0, 0, 0, 0],
           [0, 0, 0, 0, 0, 0, 0],
           [0, 0, 0, 0, 0, 0, 0]]
-
+ 
 posicion_central = (3, 3) 
 
 def encontrar_figura(posicion_central, matriz):
     figura = []
     for i in range(len(matriz)):
         for j in range(len(matriz[i])):
-            if matriz[i][j] == 1:
-                figura.append(((i, j), (i - posicion_central[0], j - posicion_central[1])))
+            if matriz[i][j] == bloque:
+                figura.append(((i, j), (abs(i - posicion_central[0]), abs(j - posicion_central[1]))))
     return figura    
+
 
 def rotar(posicion_central, matriz):
     figura = encontrar_figura(posicion_central, matriz)
     nueva_figura = []
     for (i, j), (x, y) in figura:
-        print(f"i: {i}, j: {j}, x: {x}, y: {y}")
-        if i < posicion_central[0]:
-            nueva_figura.append((i+(1*x), j+(1*y)))
-            print("i < posicion_central[0]")
-        elif i > posicion_central[0]:
-            nueva_figura.append((i-(1*x), j-(1*y)))
-            print("i > posicion_central[0]")
+
+        # Rotación cuando bloque está al norte, sur, este u oeste de la figura central 
+        if i < posicion_central[0] and j == posicion_central[1]:
+            nueva_figura.append((i+x, j+x))
+        elif i > posicion_central[0] and j == posicion_central[1]:
+            nueva_figura.append((i-x, j-x))
         elif i == posicion_central[0] and  j < posicion_central[1]:
-            nueva_figura.append((i+y, j+x))
-            print("i == posicion_central[0] and j < posicion_central[1]")
+            nueva_figura.append((i-y, j+y))
         elif i == posicion_central[0] and  j > posicion_central[1]:
             nueva_figura.append((i+y, j-y))
-            print("i == posicion_central[0] and j > posicion_central[1]")
+
+        # Rotación cuando bloque está en diagonal respecto a la figura central 
+        elif i > posicion_central[0] and j > posicion_central[1]: 
+            nueva_figura.append((i+(y-1), j-(y+1)))
+        elif i > posicion_central[0] and j < posicion_central[1]:
+            nueva_figura.append((i-(x+1), j-(x-1)))
+        elif i < posicion_central[0] and j < posicion_central[1]:
+            nueva_figura.append((i-(y-1), j+(y+1)))
+        elif i < posicion_central[0] and j > posicion_central[1]:
+            nueva_figura.append((i+(x+1), j+(x-1)))
+
+        # El bloque es el eje de rotación, no se mueve
         else:
             nueva_figura.append((i, j))
-            print("else")
+
 
     return nueva_figura
 
@@ -43,12 +55,19 @@ def actualizar_matriz(matriz, figura):
     """
     Actualiza la matriz con la nueva figura.
     """
+    for (x, y) in figura:
+        for i in range(len(matriz)):
+            for j in range(len(matriz[i])):
+                if i == x and j == y:
+                    if matriz[i][j] != 0:
+                        return matriz
+
     for i in range(len(matriz)):
         for j in range(len(matriz[i])):
-            if matriz[i][j] == 1:
+            if matriz[i][j] == bloque:
                 matriz[i][j] = 0
     for (i, j) in figura:
-        matriz[i][j] = 1
+        matriz[i][j] = bloque
     return matriz
 
 def imprimir_matriz(matriz):
@@ -79,4 +98,12 @@ def correr_todo():
     print("Matriz actualizada:")
     imprimir_matriz(matriz)
 
-correr_todo()
+
+while True:
+    print("Matriz original:")
+    imprimir_matriz(matriz)
+
+
+    input("Presiona Enter para rotar la figura...")
+    
+    correr_todo()
