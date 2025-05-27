@@ -3,11 +3,15 @@ from PIL.ImageTk import PhotoImage as ImageTk
 from PIL import Image
 import random
 from os import system
-system("clear")
+from time import sleep
+
+
+system("cls")
 
 ventana = Tk()
 ventana.title("Tetris")
 ventana.geometry("660x660")
+ventana.resizable(False, False)
 ventana.config(bg="black")
 
 frame_tetris = Frame(ventana, bg="black")
@@ -17,11 +21,11 @@ cubo_gris = Image.open("recursos/cubos/gris.png")
 cubo_gris = cubo_gris.resize((30, 30), Image.LANCZOS)
 cubo_gris = ImageTk(cubo_gris)
 
-fondo_juego = Image.open("recursos/fondo_juegoo.png")
+fondo_juego = Image.open("recursos/fondo_juego.jpg")
 fondo_juego = fondo_juego.resize((360, 660), Image.LANCZOS)
 fondo_juego = ImageTk(fondo_juego)
 fondo = Label(frame_tetris, image=fondo_juego, bd=0, highlightthickness=0)
-#fondo.grid(row=0, column=0, rowspan=22, columnspan=12)
+fondo.grid(row=0, column=0, rowspan=22, columnspan=12)
 
 # --- Inicialización del área de juego ---
 
@@ -253,7 +257,6 @@ def fila_llena():
             puntuacion_actual += 100
             puntuacion.config(text=f"Puntuación Actual: {puntuacion_actual}pts")
 
-    
 def bajar_figuras(fila_destruida):
 
     for linea in range(fila_destruida-1, 0, -1):
@@ -265,10 +268,133 @@ def bajar_figuras(fila_destruida):
                 cubos[linea+1][columna] = cubo
                 cubos[linea][columna] = None  # Eliminar la referencia
 
+def inicio():
+    spawn_figura()
+    frame_tetris.after(1000, bajar_automaticamente)
+
+def iniciar_juego():
+    limpiar_menu()
+    cargar_leaderboard()
+    menu_principal.grid_forget()
+    frame_tetris.after(500, inicio)
+
+def menu_login():
+
+    boton_iniciar.lower()
+    boton_salir.lower()
+    fondo_menu_label.grid(columnspan=2, rowspan=4, sticky="nsew")
+    label_username.grid(row=1, column=0, padx=10, pady=10, sticky="s")
+    entryBox_username.grid(row=1, column=1, padx=10, pady=10, sticky="s")
+    label_password.grid(row=2, column=0, padx=10, pady=10, sticky="n")
+    entryBox_password.grid(row=2, column=1, padx=10, pady=10, sticky="n")
+    boton_iniciar_sesion.grid(row=3, column=0, padx=10, pady=10, sticky="ne")
+    boton_registrarse.grid(row=3, column=1, padx=10, pady=10, sticky="n")
+
+def usuario_incorrecto():
+    entryBox_username.delete(0, END)
+    entryBox_password.delete(0, END)
+    entryBox_username.insert(0, "Usuario incorrecto")
+    entryBox_username.config(fg="red")
+    menu_principal.after(2000, lambda: (entryBox_username.config(fg="white"), entryBox_username.delete(0, END)))
+    
+def contrasena_incorrecta():
+    entryBox_password.delete(0, END)
+    entryBox_password.insert(0, "Jaja, no sabe") # Esto no se mostrará
+    entryBox_password.config(fg="red")
+    menu_principal.after(2000, lambda: (entryBox_password.config(fg="white"), entryBox_password.delete(0, END)))
+
+def limpiar_menu():
+    entryBox_username.config(fg="white")
+    entryBox_password.config(fg="white")
+    entryBox_username.delete(0, END)
+    entryBox_password.delete(0, END)
+    label_username.grid_forget()
+    entryBox_username.grid_forget()
+    label_password.grid_forget()
+    entryBox_password.grid_forget()
+    boton_iniciar_sesion.grid_forget()
+    boton_registrarse.grid_forget()
+    fondo_menu_label.grid(rowspan=3, columnspan=1)
+
+    boton_iniciar.lift()
+    boton_salir.lift()
+
+def login_correcto():
+    entryBox_username.delete(0, END)
+    entryBox_password.delete(0, END)
+    entryBox_username.insert(0, "¡Regresaste!")
+    entryBox_username.config(fg="#00FF00")
+    menu_principal.after(2000, lambda: iniciar_juego())
+    
+def iniciar_sesion():
+    global usuario, archivo_juego
+    username = entryBox_username.get()
+    password = entryBox_password.get()
+
+    data = open("data/user_data.txt", "r")
+    data_lines = data.readlines()
+    data.close()
+
+    usuarios = {}
+
+    for linea in data_lines:
+        usuarios[linea.split()[0]] = linea.split()[1]
+    if username in usuarios:
+        if usuarios[username] == password:
+            usuario = username 
+            archivo_juego = linea.split()[3]
+            login_correcto()
+        else:
+            contrasena_incorrecta()
+    else:
+        usuario_incorrecto()
+
+def maximo(lista_listas):
+    usuario_maximo = "Por definir"
+    maximo = 0
+    indice_maximo = 0
+    
+    for i, [usuario, score] in enumerate(lista_listas):
+        if score > maximo:
+            maximo = score
+            usuario_maximo = usuario
+            indice_maximo = i 
+    
+    return usuario_maximo, maximo, indice_maximo
+
+def len_listas(lista_listas):
+    contador = 0
+    for _ in lista_listas:
+        contador += 1
+    return contador
+
+def cargar_leaderboard():
+    global leaderboard_data
+    data = open("data/user_data.txt", "r")
+    data_lines = data.readlines()
+    data.close()
+
+    scores = []
+    for linea in data_lines:
+        usuario = linea.split()[0]
+        score = int(linea.split()[2])
+        scores += [[usuario, score]]
+    
+    for i in range(10):
+        if len_listas(scores) > 0:
+            usuario_maximo, maximo_puntaje, indice = maximo(scores)
+            print(f"Iteración {i}: {usuario_maximo}, {maximo_puntaje}")
+            scores.pop(indice)
+            leaderboard_data[i] = [usuario_maximo, maximo_puntaje]
+            jugadores[f"{i}"].config(text=f"{i+1}. {usuario_maximo}: {maximo_puntaje}pts")
+
+        else:
+            leaderboard_data[i][0] = "Por definir"
+            leaderboard_data[i][1] = 0
+            jugadores[f"{i}"].config(text=f"{i+1}. Por definir: 0pts")
+    
 eje_de_rotacion = ()
 vieja_figura = []
-spawn_figura()
-bajar_automaticamente()
 
 # --- Eventos de teclado ---
 ventana.bind("<Left>", lambda e: mover(0, -1))
@@ -298,11 +424,37 @@ frame_leaderboard.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 frame_leaderboard.grid_columnconfigure(0, weight=1)
 Label(frame_leaderboard, text="Top 10 jugadores", bg="black", fg="white", font=("Arial", 14, "bold")).grid(row=0, column=0, padx=5, pady=5, sticky="we")
 jugadores = {}
-leaderboard_data = [["Por definir", 0] for _ in range(10)]  
+leaderboard_data = [["Por definir", 0] for _ in range(10)]
 
+menu_principal = Frame(ventana, bg="black")
+menu_principal.grid(row=0, column=0, columnspan=2, sticky="nsew")
+
+fondo_menu = Image.open("recursos/fondo_menu.png")
+fondo_menu = fondo_menu.resize((660, 660), Image.LANCZOS)
+fondo_menu = ImageTk(fondo_menu)
+fondo_menu_label = Label(menu_principal, image=fondo_menu, bd=0, highlightthickness=0)
+fondo_menu_label.grid(row=0, column=0, rowspan=3)
+
+
+boton_iniciar = Button(menu_principal, text="Jugar", command=menu_login, bg="black", fg="white", font=("Unispace", 30, "bold"), border=5, relief="groove")
+boton_iniciar.grid(row=1, column=0, padx=10, pady=10, sticky="s")
+boton_salir = Button(menu_principal, text="Salir", command=ventana.quit, bg="black", fg="white", font=("Unispace", 30, "bold"), border=5, relief="groove")
+boton_salir.grid(row=2, column=0, padx=10, pady=10, sticky="n")
+
+label_username = Label(menu_principal, text="Usuario", bg="black", fg="white", font=("Unispace", 20, "bold"), relief="raised", border=5, padx=10)
+entryBox_username = Entry(menu_principal, bg="black", fg="white", font=("Unispace", 20), border=5, relief="groove")
+label_password = Label(menu_principal, text="Contraseña", bg="black", fg="white", font=("Unispace", 20, "bold"), relief="raised", border=5, padx=10)
+entryBox_password = Entry(menu_principal, show="*", bg="black", fg="white", font=("Unispace", 20), border=5, relief="groove")
+boton_iniciar_sesion = Button(menu_principal, text="Iniciar Sesión", command=iniciar_sesion, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
+boton_registrarse = Button(menu_principal, text="Registrarse", command=lambda: print("Registrarse"), bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
 
 for i in range(10):
-    jugadores[f"{i+1}"] = Label(frame_leaderboard, text=f"{i+1}. Por definir: 0pts", bg="black", fg="white", font=("Arial", 12))
-    jugadores[f"{i+1}"].grid(row=i+1, column=0, padx=5, pady=5, sticky="w")
+    jugadores[f"{i}"] = Label(frame_leaderboard, text=f"{i+1}. Por definir: 0pts", bg="black", fg="white", font=("Arial", 12))
+    jugadores[f"{i}"].grid(row=i+1, column=0, padx=5, pady=5, sticky="w")
 # Inicialización
+scores = {}
+usuario = ""
+archivo_juego = ""
+
+
 frame_tetris.mainloop()
