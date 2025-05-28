@@ -3,7 +3,7 @@ from PIL.ImageTk import PhotoImage as ImageTk
 from PIL import Image
 import random
 from os import system
-from time import sleep
+
 
 
 system("cls")
@@ -28,33 +28,116 @@ fondo = Label(frame_tetris, image=fondo_juego, bd=0, highlightthickness=0)
 fondo.grid(row=0, column=0, rowspan=22, columnspan=12)
 
 # --- Inicialización del área de juego ---
-
-# Crear matriz de 22x12
+ # Crear matriz de 22x12
 matriz = [[0 for _ in range(12)] for _ in range(22)]
 
 # Crear una matriz para almacenar referencias de cubos
 cubos = [[None for _ in range(12)] for _ in range(22)]
 
-# Poner 1 en los bordes de la matriz
-for linea in range(22):
-    for columna in range(12):
-        if linea == 0:
-            matriz[linea][columna] = 1
-        
-        if columna == 0 or columna == 11:
-            matriz[linea][columna] = 1
+def len_lista(lista):
+    contador = 0
+    for _ in lista:
+        contador += 1
+    return contador
 
-        if linea == 21:
-            matriz[linea][columna] = 1
+def reiniciar_matriz():
+    global matriz, cubos
+    # Poner 1 en los bordes de la matriz
+    for linea in range(22):
+        for columna in range(12):
+            if linea == 0:
+                matriz[linea][columna] = 1
+            
+            if columna == 0 or columna == 11:
+                matriz[linea][columna] = 1
 
-# Poner bloques grises en la matriz
-for linea in range(22):
-    for columna in range(12):
-        if matriz[linea][columna] == 1:
-            cubo = Label(frame_tetris, image=cubo_gris, bd=0, highlightthickness=0)
-            cubo.grid(row=linea, column=columna)
-            cubos[linea][columna] = cubo
+            if linea == 21:
+                matriz[linea][columna] = 1
 
+    # Poner obstaculos en la matriz
+    for linea in range(5, 7 ):
+        for columna in range(1, 11):
+            if random.random() < 0.1:
+                matriz[linea][columna] = 1
+
+    # Poner bloques grises en la matriz
+    for linea in range(22):
+        for columna in range(12):
+            if matriz[linea][columna] == 1:
+                cubo = Label(frame_tetris, image=cubo_gris, bd=0, highlightthickness=0)
+                cubo.grid(row=linea, column=columna)
+                cubos[linea][columna] = cubo
+
+def cargar_partida():
+    global puntuacion_actual
+    partida_data = open(f"data/data_partidas/{archivo_juego}.txt", "r")
+    partida_lines = partida_data.readlines()
+    partida_data.close()
+    partida_lines = [linea.strip().split() for linea in partida_lines]
+
+    if len_lista(partida_lines) == 0:
+        # Poner 1 en los bordes de la matriz
+        for linea in range(22):
+            for columna in range(12):
+                if linea == 0:
+                    matriz[linea][columna] = 1
+                
+                if columna == 0 or columna == 11:
+                    matriz[linea][columna] = 1
+
+                if linea == 21:
+                    matriz[linea][columna] = 1
+
+        # Poner obstaculos en la matriz
+        for linea in range(5, 7 ):
+            for columna in range(1, 11):
+                if random.random() < 0.1:
+                    matriz[linea][columna] = 1
+
+        # Poner bloques grises en la matriz
+        for linea in range(22):
+            for columna in range(12):
+                if matriz[linea][columna] == 1:
+                    cubo = Label(frame_tetris, image=cubo_gris, bd=0, highlightthickness=0)
+                    cubo.grid(row=linea, column=columna)
+                    cubos[linea][columna] = cubo
+    else:
+        for linea in range(22):
+            for columna in range(12):
+                if partida_lines[linea][columna] == "1":
+                    matriz[linea][columna] = 1
+                    cubo = Label(frame_tetris, image=cubo_gris, bd=0, highlightthickness=0)
+                    cubo.grid(row=linea, column=columna)
+                    cubos[linea][columna] = cubo
+                elif partida_lines[linea][columna] == "2":
+                    matriz[linea][columna] = 2
+                    cubo = Label(frame_tetris, image=colores[0], bd=0, highlightthickness=0)
+                    cubo.grid(row=linea, column=columna)
+                    cubos[linea][columna] = cubo
+                elif partida_lines[linea][columna] == "3":
+                    matriz[linea][columna] = 3
+                    cubo = Label(frame_tetris, image=colores[1], bd=0, highlightthickness=0)
+                    cubo.grid(row=linea, column=columna)
+                    cubos[linea][columna] = cubo
+                elif partida_lines[linea][columna] == "4":
+                    matriz[linea][columna] = 4
+                    cubo = Label(frame_tetris, image=colores[2], bd=0, highlightthickness=0)
+                    cubo.grid(row=linea, column=columna)
+                    cubos[linea][columna] = cubo
+                elif partida_lines[linea][columna] == "5":
+                    matriz[linea][columna] = 5
+                    cubo = Label(frame_tetris, image=colores[3], bd=0, highlightthickness=0)
+                    cubo.grid(row=linea, column=columna)
+                    cubos[linea][columna] = cubo
+                elif partida_lines[linea][columna] == "6":
+                    matriz[linea][columna] = 6
+                    cubo = Label(frame_tetris, image=colores[4], bd=0, highlightthickness=0)
+                    cubo.grid(row=linea, column=columna)
+                    cubos[linea][columna] = cubo
+            
+            puntuacion_actual = int(partida_lines[-1][0])
+            puntuacion.config(text=f"Puntuación Actual: {puntuacion_actual}pts")
+            
 posiciones_iniciales = {"O": [(1,5), (1,6), (2,5), (2,6)],
                         "I": [(1,5), (1,6), (1,7), (1,8)],
                         "T": [(1,4), (1,5), (1,6), (2,5)],
@@ -82,6 +165,10 @@ for i, color in enumerate(colores):
     cubo_color = cubo_color.resize((30, 30), Image.LANCZOS)
     cubo_color = ImageTk(cubo_color)
     colores[i] = cubo_color
+
+estado_juego = False
+controles_juego = False
+
 
 # --- Funciones auxiliares ---
 
@@ -111,6 +198,12 @@ def spawn_figura():
     figura_aleatoria = random.choice(list(posiciones_iniciales.keys()))
     color_aleatorio = random.choice(colores)
     eje_de_rotacion = ejes_de_rotacion[figura_aleatoria]
+
+    for posicion in posiciones_iniciales[figura_aleatoria]:
+        fila, columna = posicion
+        if matriz[fila][columna] not in [0, "A"]:
+            return perdio()
+            
 
     for posicion in posiciones_iniciales[figura_aleatoria]:
         fila, columna = posicion
@@ -170,8 +263,8 @@ def mover(x, y):
 
 def eliminar_cubo(fila, columna):
     if cubos[fila][columna]:
-        cubos[fila][columna].grid_forget()
-        cubos[fila][columna] = None  # Eliminar la referencia
+        cubos[fila][columna].destroy()  
+        cubos[fila][columna] = None 
 
 def rotar():
     
@@ -238,9 +331,16 @@ def rotar():
     vieja_figura = nueva_figura
 
 def bajar_automaticamente():
-    mover(1, 0)  # Mueve la figura hacia abajo
-    frame_tetris.after(500, bajar_automaticamente)  # Llama a esta función nuevamente después de 500 ms
+    global estado_juego
+    global controles_juego
 
+    if not estado_juego:
+        desactivar_controles()
+        return frame_tetris.after(500, bajar_automaticamente)
+    mover(1, 0)  # Mueve la figura hacia abajo
+    activar_controles()
+    frame_tetris.after(500, bajar_automaticamente)  # Llama a esta función nuevamente después de 500 ms
+    
 puntuacion_actual = 0
 def fila_llena():
     global puntuacion_actual
@@ -250,6 +350,7 @@ def fila_llena():
             if celda == 0: 
                 llena = False
         if llena == True:
+            bordes_verdes()
             for columna in range(1, 11):
                 matriz[x+1][columna] = 0
                 eliminar_cubo(x+1, columna)
@@ -258,17 +359,19 @@ def fila_llena():
             puntuacion.config(text=f"Puntuación Actual: {puntuacion_actual}pts")
 
 def bajar_figuras(fila_destruida):
-
     for linea in range(fila_destruida-1, 0, -1):
         for columna in range(1, 11):
-            matriz[linea+1][columna] = matriz[linea][columna]
             cubo = cubos[linea][columna]
             if cubo:
-                cubo.grid(row=linea+1, column=columna)
-                cubos[linea+1][columna] = cubo
-                cubos[linea][columna] = None  # Eliminar la referencia
+                if cubo.cget('image') != str(cubo_gris):
+                    matriz[linea+1][columna] = matriz[linea][columna]
+                    matriz[linea][columna] = 0
+                    cubo.grid(row=linea+1, column=columna)
+                    cubos[linea+1][columna] = cubo
+                    cubos[linea][columna] = None 
 
 def inicio():
+    cargar_partida()
     spawn_figura()
     frame_tetris.after(1000, bajar_automaticamente)
 
@@ -338,11 +441,13 @@ def iniciar_sesion():
     usuarios = {}
 
     for linea in data_lines:
-        usuarios[linea.split()[0]] = linea.split()[1]
+        if linea.split()[0] != "":
+            usuarios[linea.split()[0]] = [linea.split()[1], linea.split()[3]]
+
     if username in usuarios:
-        if usuarios[username] == password:
+        if usuarios[username][0] == password:
             usuario = username 
-            archivo_juego = linea.split()[3]
+            archivo_juego = usuarios[username][1]
             login_correcto()
         else:
             contrasena_incorrecta()
@@ -392,7 +497,267 @@ def cargar_leaderboard():
             leaderboard_data[i][0] = "Por definir"
             leaderboard_data[i][1] = 0
             jugadores[f"{i}"].config(text=f"{i+1}. Por definir: 0pts")
+
+def usuario_existe(usuario):
+    data = open("data/user_data.txt", "r")
+    data_lines = data.readlines()
+    data.close()
+
+    for linea in data_lines:
+        if linea.split()[0] == usuario:
+            return True
+    return False
+
+def error_usuario_existente():
+    entryBox_username.delete(0, END)
+    entryBox_username.insert(0, "Usuario ya existe")
+    entryBox_username.config(fg="red")
+    menu_principal.after(2000, lambda: (entryBox_username.config(fg="white"), entryBox_username.delete(0, END)))
+
+def registro_exitoso():
+    entryBox_username.delete(0, END)
+    entryBox_password.delete(0, END)
+    entryBox_username.insert(0, "¡Registro exitoso!")
+    entryBox_username.config(fg="#00FF00")
+    menu_principal.after(2000, lambda: (entryBox_username.config(fg="white"), entryBox_username.delete(0, END), iniciar_juego()))
+
+def registrar_usuario():
+    global usuario, archivo_juego
+    username = entryBox_username.get()
+    password = entryBox_password.get()
+
+    if usuario_existe(username):
+        return error_usuario_existente()
     
+    data = open("data/user_data.txt", "a")
+    data.write(f"{username} {password} 0 {username}.txt\n")
+    data.close()
+
+    data_partida = open(f"data/data_partidas/{username}.txt", "w")
+    data_partida.close()
+    return registro_exitoso()
+
+def bordes_verdes():
+    for columna in range(12):
+        cubos[0][columna].config(image=colores[2])
+        cubos[21][columna].config(image=colores[2])
+    
+    for fila in range(1, 21):
+        cubos[fila][0].config(image=colores[2])
+        cubos[fila][11].config(image=colores[2])
+
+    ventana.after(500, bordes_grises)  
+
+def bordes_rojos():
+    for columna in range(12):
+        cubos[0][columna].config(image=colores[1])
+        cubos[21][columna].config(image=colores[1])
+    
+    for fila in range(1, 21):
+        cubos[fila][0].config(image=colores[1])
+        cubos[fila][11].config(image=colores[1])
+
+def bordes_grises():
+    for columna in range(12):
+        cubos[0][columna].config(image=cubo_gris)
+        cubos[21][columna].config(image=cubo_gris)
+    
+    for fila in range(1, 21):
+        cubos[fila][0].config(image=cubo_gris)
+        cubos[fila][11].config(image=cubo_gris)
+
+def bordes_azules():
+    for columna in range(12):
+        cubos[0][columna].config(image=colores[0])
+        cubos[21][columna].config(image=colores[0])
+    
+    for fila in range(1, 21):
+        cubos[fila][0].config(image=colores[0])
+        cubos[fila][11].config(image=colores[0])
+
+def perdio():
+    bordes_rojos()
+
+    data = open("data/user_data.txt", "r")
+    data_lines = data.readlines()
+    data.close()
+    
+    for linea in data_lines:
+        if linea.split()[0] == usuario:
+            puntaje = int(linea.split()[2])
+            if puntuacion_actual > puntaje:
+                linea = f"{usuario} {linea.split()[1]} {puntuacion_actual} {archivo_juego}\n"
+            else:
+                linea = f"{usuario} {linea.split()[1]} {puntaje} {archivo_juego}\n"
+        else:
+            linea = linea
+    
+    return mostrar_pantalla_perdio()
+
+def toggle_pausa():
+    global estado_juego
+    if  not estado_juego:
+        pausa.config(text="Pausar Juego")
+        bordes_grises()
+    else:
+        pausa.config(text="Continuar Juego")
+        bordes_azules()
+    estado_juego = not estado_juego
+
+def desactivar_controles():
+        ventana.unbind("<Left>")
+        ventana.unbind("<Right>")
+        ventana.unbind("<Down>")
+        ventana.unbind("<Up>")
+        ventana.unbind("<R>")
+        ventana.unbind("<r>")
+        ventana.unbind("<w>")
+        ventana.unbind("<W>")
+        ventana.unbind("<a>")
+        ventana.unbind("<A>")
+        ventana.unbind("<d>")
+        ventana.unbind("<D>")
+        ventana.unbind("<s>")
+        ventana.unbind("<S>")
+        print("Controles desactivados")
+
+def activar_controles():
+    ventana.bind("<Left>", lambda e: mover(0, -1))
+    ventana.bind("<Right>", lambda e: mover(0, 1))
+    ventana.bind("<Down>", lambda e: mover(1, 0))
+    ventana.bind("<Up>", lambda e: rotar())
+    ventana.bind("<R>", lambda e: rotar())
+    ventana.bind("<r>", lambda e: rotar())  
+    ventana.bind("<w>", lambda e: rotar())
+    ventana.bind("<W>", lambda e: rotar())
+    ventana.bind("<a>", lambda e: mover(0, -1))
+    ventana.bind("<A>", lambda e: mover(0, -1))
+    ventana.bind("<d>", lambda e: mover(0, 1))
+    ventana.bind("<D>", lambda e: mover(0, 1))
+    ventana.bind("<s>", lambda e: mover(1, 0))
+    ventana.bind("<S>", lambda e: mover(1, 0))
+    print("Controles activados")
+
+def crear_matriz_para_guardar():
+    matriz_guardar = [[0 for _ in range(12)] for _ in range(22)]
+
+    """"
+    Colores
+    Azul: 2
+    Rojo: 3
+    Verde: 4
+    Morado: 5
+    Rosado: 6
+    Grises: 1
+    """
+
+    for fila in range(22):
+        for columna in range(12):
+            cubo = cubos[fila][columna]
+            if not cubo:
+                pass
+            elif matriz[fila][columna] == "A":
+                pass
+            elif cubo.cget('image') == str(cubo_gris):
+                matriz_guardar[fila][columna] = 1
+            elif cubo.cget('image') == str(colores[0]):
+                matriz_guardar[fila][columna] = 2
+            elif cubo.cget('image') == str(colores[1]):
+                matriz_guardar[fila][columna] = 3
+            elif cubo.cget('image') == str(colores[2]):
+                matriz_guardar[fila][columna] = 4
+            elif cubo.cget('image') == str(colores[3]):
+                matriz_guardar[fila][columna] = 5
+            elif cubo.cget('image') == str(colores[4]):
+                matriz_guardar[fila][columna] = 6
+
+    matriz_string = ""
+    for fila in matriz_guardar:
+        for columna in fila:
+            matriz_string += str(columna) + " "
+        matriz_string += "\n"
+    matriz_string += f"\n{puntuacion_actual}\n"
+    
+    return matriz_string.strip()
+
+def actualizar_archivo_guardado():
+    matriz_guardar = crear_matriz_para_guardar()
+    partida_guardada = open(f"data/data_partidas/{archivo_juego}", "w")
+    partida_guardada.write(matriz_guardar)
+    partida_guardada.close()
+
+def actualizar_user_data():
+    global puntuacion_actual
+    user_data = open("data/user_data.txt", "r")
+    user_data_lines = user_data.readlines()
+    user_data.close()
+
+    for i, linea in enumerate(user_data_lines):              
+        if linea.split()[0] == usuario:                                                 
+            puntaje_actual_archivo = int(linea.split()[2]) 
+            if puntuacion_actual > puntaje_actual_archivo:  
+                user_data_lines[i] = f"{usuario} {linea.split()[1]} {puntuacion_actual} {archivo_juego}\n" 
+            break  
+    
+    user_data = open("data/user_data.txt", "w")
+    user_data.writelines(user_data_lines)
+    user_data.close()    
+
+def guardar_y_salir():
+    global estado_juego
+    estado_juego = False
+    actualizar_archivo_guardado()
+    actualizar_user_data()
+    crear_matriz_para_el_profe()
+    ventana.quit()
+
+def reiniciar_juego():
+
+    actualizar_archivo_guardado()
+    actualizar_user_data()
+    crear_matriz_para_el_profe()
+    cargar_leaderboard()
+    toggle_pausa()
+
+    global matriz, cubos, puntuacion_actual, estado_juego
+    matriz = [[0 for _ in range(12)] for _ in range(22)]
+    for fila in range(22):
+        for columna in range(12):
+            if cubos[fila][columna]:
+                eliminar_cubo(fila, columna)
+        
+    
+    puntuacion_actual = 0
+    puntuacion.config(text=f"Puntuación Actual: {puntuacion_actual}pts")
+    estado_juego = False
+    pausa.config(text="Iniciar Juego")
+
+    reiniciar_matriz()
+    spawn_figura()
+
+def crear_matriz_para_el_profe():
+    matriz_profe = [[0 for _ in range(12)] for _ in range(22)]
+    for fila in range(22):
+        for columna in range(12):
+            if matriz[fila][columna] == 1:
+                matriz_profe[fila][columna] = "+"
+            elif matriz[fila][columna] == "A":
+                matriz_profe[fila][columna] = 0
+            elif matriz[fila][columna] == 0:
+                matriz_profe[fila][columna] = 0
+            else:
+                matriz_profe[fila][columna] = 1
+
+    matriz_string = ""
+    for fila in matriz_profe:
+        for columna in fila:
+            matriz_string += str(columna) + " "
+        matriz_string += "\n"
+    
+    data_matriz_profe = open(f"data/matrices_Profe/{usuario}.txt", "w")
+    data_matriz_profe.write(matriz_string.strip())
+    data_matriz_profe.close()
+
 eje_de_rotacion = ()
 vieja_figura = []
 
@@ -411,6 +776,8 @@ ventana.bind("<d>", lambda e: mover(0, 1))
 ventana.bind("<D>", lambda e: mover(0, 1))
 ventana.bind("<s>", lambda e: mover(1, 0))
 ventana.bind("<S>", lambda e: mover(1, 0))
+ventana.bind("<Escape>", lambda e: toggle_pausa())
+ventana.bind("<space>", lambda e: toggle_pausa())
 
 # GUI
 frame_stats = Frame(ventana, bg="black")
@@ -425,6 +792,11 @@ frame_leaderboard.grid_columnconfigure(0, weight=1)
 Label(frame_leaderboard, text="Top 10 jugadores", bg="black", fg="white", font=("Arial", 14, "bold")).grid(row=0, column=0, padx=5, pady=5, sticky="we")
 jugadores = {}
 leaderboard_data = [["Por definir", 0] for _ in range(10)]
+
+pausa = Button(frame_stats, text="Iniciar Juego", command=toggle_pausa, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
+pausa.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
+guardar = Button(frame_stats, text="Guardar y salir", command=guardar_y_salir, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
+guardar.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
 
 menu_principal = Frame(ventana, bg="black")
 menu_principal.grid(row=0, column=0, columnspan=2, sticky="nsew")
@@ -446,7 +818,58 @@ entryBox_username = Entry(menu_principal, bg="black", fg="white", font=("Unispac
 label_password = Label(menu_principal, text="Contraseña", bg="black", fg="white", font=("Unispace", 20, "bold"), relief="raised", border=5, padx=10)
 entryBox_password = Entry(menu_principal, show="*", bg="black", fg="white", font=("Unispace", 20), border=5, relief="groove")
 boton_iniciar_sesion = Button(menu_principal, text="Iniciar Sesión", command=iniciar_sesion, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
-boton_registrarse = Button(menu_principal, text="Registrarse", command=lambda: print("Registrarse"), bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
+boton_registrarse = Button(menu_principal, text="Registrarse", command=registrar_usuario, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
+
+def mostrar_pantalla_perdio():
+    # Crear un frame superpuesto
+    frame_perdio = Frame(frame_tetris, bg="black")
+    frame_perdio.place(relx=0, rely=0, relwidth=1, relheight=1)
+
+    # Mensaje de que perdió
+    label_perdio = Label(
+        frame_perdio,
+        text="¡Skill Issue!",
+        bg="black",
+        fg="red",
+        font=("Unispace", 32, "bold")
+    )
+    label_perdio.pack(pady=60)
+
+    # Botón para jugar otra vez
+    def jugar_otra_vez():
+        frame_perdio.destroy()
+        reiniciar_juego()
+
+    boton_reintentar = Button(
+        frame_perdio,
+        text="Jugar otra vez",
+        command=jugar_otra_vez,
+        bg="black",
+        fg="white",
+        font=("Unispace", 20, "bold"),
+        border=5,
+        relief="groove"
+    )
+    boton_reintentar.pack(pady=20)
+
+    def salir_perdio():
+        data_usuario = open(f"data/data_partidas/{usuario}.txt", "w")
+        data_usuario.close()
+
+        ventana.quit()
+
+    # Botón para salir
+    boton_salir_perdio = Button(
+        frame_perdio,
+        text="Salir",
+        command=salir_perdio,
+        bg="black",
+        fg="white",
+        font=("Unispace", 20, "bold"),
+        border=5,
+        relief="groove"
+    )
+    boton_salir_perdio.pack(pady=10)
 
 for i in range(10):
     jugadores[f"{i}"] = Label(frame_leaderboard, text=f"{i+1}. Por definir: 0pts", bg="black", fg="white", font=("Arial", 12))
@@ -455,6 +878,7 @@ for i in range(10):
 scores = {}
 usuario = ""
 archivo_juego = ""
+
 
 
 frame_tetris.mainloop()

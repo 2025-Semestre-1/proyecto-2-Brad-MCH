@@ -1,3 +1,4 @@
-Brad 1234 1000 sin_juego
-Pablo 1234 3000 sin_juego
-Eduardo 1234 5000 sin_juego
+Brad 1234 400 Brad.txt
+Patron 1234 200 Patron.txt
+Pablo 1234 300 Pablo.txtEl_bicho 1234 0 El_bicho.txt
+
