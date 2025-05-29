@@ -2,11 +2,19 @@ from tkinter import *
 from PIL.ImageTk import PhotoImage as ImageTk
 from PIL import Image
 import random
-from os import system
 import time
 
+"""
+AVISO IMPORTANTE PARA LA DOCUMENTACIÓN INTERNA:
 
-system("cls")
+En este código, toda función que no recibe parametros es una función de tipo VOID, es decir, no retorna nada.
+Por ende, su entrada es nula su salida es nula y sus restricciones son nulas. 
+
+Este código tiene 900 lineas de funciones, de las cuales 800 son de tipo VOID, por lo que para no
+aglomerar el código, si una función es de tipo VOID y no tiene comentarios, se puede asumir que sus entradas, salidas y restricciones son nulas.
+
+Las funciones que no sigan esta regla, tendrán comentarios que indiquen sus entradas, salidas y restricciones.
+"""
 
 ventana = Tk()
 ventana.title("Tetris")
@@ -14,26 +22,71 @@ ventana.geometry("660x660")
 ventana.resizable(False, False)
 ventana.config(bg="black")
 
-frame_tetris = Frame(ventana, bg="black")
-frame_tetris.grid(row=0, column=0)
-
+# --- Cargar imágenes ---
 cubo_gris = Image.open("recursos/cubos/gris.png")
 cubo_gris = cubo_gris.resize((30, 30), Image.LANCZOS)
 cubo_gris = ImageTk(cubo_gris)
-
 fondo_juego = Image.open("recursos/fondo_juego.jpg")
 fondo_juego = fondo_juego.resize((360, 660), Image.LANCZOS)
 fondo_juego = ImageTk(fondo_juego)
-fondo = Label(frame_tetris, image=fondo_juego, bd=0, highlightthickness=0)
-fondo.grid(row=0, column=0, rowspan=22, columnspan=12)
+fondo_menu = Image.open("recursos/fondo_menu.png")
+fondo_menu = fondo_menu.resize((660, 660), Image.LANCZOS)
+fondo_menu = ImageTk(fondo_menu)
+colores = ["azul", "rojo", "verde", "morado", "rosado"]
+for i, color in enumerate(colores):
+    cubo_color = Image.open(f"recursos/cubos/{color}.png")
+    cubo_color = cubo_color.resize((30, 30), Image.LANCZOS)
+    cubo_color = ImageTk(cubo_color)
+    colores[i] = cubo_color
 
-# --- Inicialización del área de juego ---
- # Crear matriz de 22x12
+# --- Variables lógicas ---
 matriz = [[0 for _ in range(12)] for _ in range(22)]
-
-# Crear una matriz para almacenar referencias de cubos
 cubos = [[None for _ in range(12)] for _ in range(22)]
 
+posiciones_iniciales = {"O": [(1,5), (1,6), (2,5), (2,6)],
+                        "I": [(1,5), (1,6), (1,7), (1,8)],
+                        "T": [(1,4), (1,5), (1,6), (2,5)],
+                        "L": [(1,5), (2,5), (3,5), (3,6)],
+                        "J": [(1,6), (2,6), (3,6), (3,5)],
+                        "S": [(1,5), (1,6), (2,6), (2,7)],
+                        "Z": [(1,6), (1,7), (2,5), (2,6)],
+                        "U": [(1,4), (2,4), (2,5), (2,6), (1,6)],
+                        "+": [(1,5), (2,5), (3,5), (2,4), (2,6)]}
+
+ejes_de_rotacion = {"O": (1,5),
+                    "I": (1,6),
+                    "T": (1,5),
+                    "L": (2,5),
+                    "J": (2,6),
+                    "S": (1,6),
+                    "Z": (1,6),
+                    "U": (2,5),
+                    "+": (2,5)}
+
+# --- Variables Globales ---
+
+scores = {}
+usuario = ""
+archivo_juego = ""
+estado_juego = False
+controles_juego = False
+ultimo_movimiento = 0
+ultimo_rotar = 0
+debounce_tiempo = 0.1
+puntuacion_actual = 0
+eje_de_rotacion = ()
+vieja_figura = []
+ultimo_retroceso = 0
+veces_retroceso = 0
+
+
+# --- Funciones auxiliares ---
+
+"""
+Entrada: lista
+Salida: entero (longitud de la lista)
+Restricciones: La entrada debe ser una lista.
+"""
 def len_lista(lista):
     contador = 0
     for _ in lista:
@@ -136,59 +189,7 @@ def cargar_partida():
                     cubos[linea][columna] = cubo
             
             puntuacion_actual = int(partida_lines[-1][0])
-            puntuacion.config(text=f"Puntuación Actual: {puntuacion_actual}pts")
-            
-posiciones_iniciales = {"O": [(1,5), (1,6), (2,5), (2,6)],
-                        "I": [(1,5), (1,6), (1,7), (1,8)],
-                        "T": [(1,4), (1,5), (1,6), (2,5)],
-                        "L": [(1,5), (2,5), (3,5), (3,6)],
-                        "J": [(1,6), (2,6), (3,6), (3,5)],
-                        "S": [(1,5), (1,6), (2,6), (2,7)],
-                        "Z": [(1,6), (1,7), (2,5), (2,6)],
-                        "U": [(1,4), (2,4), (2,5), (2,6), (1,6)],
-                        "+": [(1,5), (2,5), (3,5), (2,4), (2,6)]}
-
-ejes_de_rotacion = {"O": (1,5),
-                    "I": (1,6),
-                    "T": (1,5),
-                    "L": (2,5),
-                    "J": (2,6),
-                    "S": (1,6),
-                    "Z": (1,6),
-                    "U": (2,5),
-                    "+": (2,5)}
-
-
-colores = ["azul", "rojo", "verde", "morado", "rosado"]
-for i, color in enumerate(colores):
-    cubo_color = Image.open(f"recursos/cubos/{color}.png")
-    cubo_color = cubo_color.resize((30, 30), Image.LANCZOS)
-    cubo_color = ImageTk(cubo_color)
-    colores[i] = cubo_color
-
-estado_juego = False
-controles_juego = False
-ultimo_movimiento = 0
-ultimo_rotar = 0
-debounce_tiempo = 0.1
-
-# --- Funciones auxiliares ---
-
-def imprimir_matriz():
-    for fila in matriz:
-        print(fila)
-
-def imprimir_cubos():
-    matriz_cubos = [[0 for _ in range(12)] for _ in range(22)]
-    for fila in range(22):
-        for columna in range(12):
-            if cubos[fila][columna]:
-                matriz_cubos[fila][columna] = 1
-    for fila in matriz_cubos:
-        for columna in fila:
-            print(columna, end=" ")
-        print()    
-
+            puntuacion.config(text=f"Puntuación Actual: {puntuacion_actual}pts")          
 
 def abajo_limite(figura):
     for fila, columna in figura:
@@ -378,7 +379,6 @@ def bajar_automaticamente():
     activar_controles()
     frame_tetris.after(velocidad, bajar_automaticamente)  
     
-puntuacion_actual = 0
 def fila_llena():
     global puntuacion_actual
     for x, fila in enumerate(matriz[1:-1]):
@@ -412,6 +412,7 @@ def inicio():
     desactivar_controles()
     spawn_figura()
     activar_controles()
+    bindings_inicio()
     frame_tetris.after(1000, bajar_automaticamente)
 
 def iniciar_juego():
@@ -473,6 +474,14 @@ def iniciar_sesion():
     username = entryBox_username.get()
     password = entryBox_password.get()
 
+    if username == "" or password == "":
+        entryBox_username.delete(0, END)
+        entryBox_password.delete(0, END)
+        entryBox_username.insert(0, "Campos vacíos 🚫")
+        entryBox_username.config(fg="red")
+        menu_principal.after(2000, lambda: (entryBox_username.config(fg="white"), entryBox_username.delete(0, END)))
+        return
+
     data = open("data/user_data.txt", "r")
     data_lines = data.readlines()
     data.close()
@@ -493,6 +502,16 @@ def iniciar_sesion():
     else:
         usuario_incorrecto()
 
+"""
+Entrada: lista_listas (lista de listas con formato [[usuario, score], ...])
+
+Salida: tupla (usuario_maximo, maximo, indice_maximo) 
+    Usuarion_maximo: nombre del usuario con la puntuación más alta.
+    maximo: puntuación más alta.
+    indice_maximo: índice del usuario con la puntuación más alta en la lista original.
+
+Restricciones: La entrada debe ser una lista de listas donde cada sublista contiene un usuario y su puntuación.
+"""
 def maximo(lista_listas):
     usuario_maximo = "Por definir"
     maximo = 0
@@ -506,6 +525,11 @@ def maximo(lista_listas):
     
     return usuario_maximo, maximo, indice_maximo
 
+"""
+Entrada: lista_listas (lista de listas)
+Salida: entero (longitud de la lista de listas)
+Restricciones: La entrada debe ser una lista de listas.
+"""
 def len_listas(lista_listas):
     contador = 0
     for _ in lista_listas:
@@ -536,6 +560,11 @@ def cargar_leaderboard():
             leaderboard_data[i][1] = 0
             jugadores[f"{i}"].config(text=f"{i+1}. Por definir: 0pts")
 
+"""
+Entrada: String (usuario_) nombre de usuario a verificar
+Salida: Booleano (True si el usuario existe, False si no)
+Restricciones: El usuario debe de ser un string
+"""
 def usuario_existe(usuario_):
     global usuario
     global archivo_juego
@@ -568,6 +597,29 @@ def registrar_usuario():
     global usuario, archivo_juego
     username = entryBox_username.get()
     password = entryBox_password.get()
+
+    if username == "" or password == "":
+        entryBox_username.delete(0, END)
+        entryBox_password.delete(0, END)
+        entryBox_username.insert(0, "Campos vacíos 🚫")
+        entryBox_username.config(fg="red")
+        menu_principal.after(2000, lambda: (entryBox_username.config(fg="white"), entryBox_username.delete(0, END)))
+        return
+
+    def limpiar_campos():
+        entryBox_username.config(fg="white")
+        entryBox_password.config(fg="white")
+        entryBox_username.delete(0, END)
+        entryBox_password.delete(0, END)
+
+
+    if " " in username or " " in password:
+        entryBox_username.delete(0, END)
+        entryBox_password.delete(0, END)
+        entryBox_username.insert(0, "Espacios no 🚫")
+        entryBox_username.config(fg="red")
+        menu_principal.after(2000, limpiar_campos)
+        return
 
     if usuario_existe(username):
         return error_usuario_existente()
@@ -682,6 +734,11 @@ def activar_controles():
     ventana.bind("<s>", lambda e: mover(1, 0))
     ventana.bind("<S>", lambda e: mover(1, 0))
 
+"""
+Entrada: Nada
+Salida: String (matriz_string) que representa la matriz de cubos para guardar en un archivo.
+Restricciones: Ninguna
+"""
 def crear_matriz_para_guardar():
     matriz_guardar = [[0 for _ in range(12)] for _ in range(22)]
 
@@ -802,74 +859,10 @@ def crear_matriz_para_el_profe():
     data_matriz_profe.write(matriz_string.strip())
     data_matriz_profe.close()
 
-eje_de_rotacion = ()
-vieja_figura = []
-
-# --- Eventos de teclado ---
-ventana.bind("<Left>", lambda e: mover(0, -1))
-ventana.bind("<Right>", lambda e: mover(0, 1))
-ventana.bind("<Down>", lambda e: mover(1, 0))
-ventana.bind("<Up>", lambda e: rotar())
-ventana.bind("<R>", lambda e: rotar())
-ventana.bind("<r>", lambda e: rotar())  
-ventana.bind("<w>", lambda e: rotar())
-ventana.bind("<W>", lambda e: rotar())
-ventana.bind("<a>", lambda e: mover(0, -1))
-ventana.bind("<A>", lambda e: mover(0, -1))
-ventana.bind("<d>", lambda e: mover(0, 1))
-ventana.bind("<D>", lambda e: mover(0, 1))
-ventana.bind("<s>", lambda e: mover(1, 0))
-ventana.bind("<S>", lambda e: mover(1, 0))
-ventana.bind("<Escape>", lambda e: toggle_pausa())
-ventana.bind("<space>", lambda e: toggle_pausa())
-
-# GUI
-frame_stats = Frame(ventana, bg="black")
-frame_stats.grid(row=0, column=1, sticky="nsew")
-frame_stats.grid_rowconfigure(0, weight=0)
-frame_stats.grid_columnconfigure(0, weight=1)
-puntuacion = Label(frame_stats, text=f"Puntuación Actual: {puntuacion_actual}pts", bg="black",fg="white", font=("Arial", 16, "bold"))
-puntuacion.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
-frame_leaderboard = Frame(frame_stats, bg="black", border=5, relief="groove")
-frame_leaderboard.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
-frame_leaderboard.grid_columnconfigure(0, weight=1)
-Label(frame_leaderboard, text="Top 10 jugadores", bg="black", fg="white", font=("Arial", 14, "bold")).grid(row=0, column=0, padx=5, pady=5, sticky="we")
-jugadores = {}
-leaderboard_data = [["Por definir", 0] for _ in range(10)]
-
-pausa = Button(frame_stats, text="Iniciar Juego", command=toggle_pausa, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
-pausa.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
-guardar = Button(frame_stats, text="Guardar y salir", command=guardar_y_salir, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
-guardar.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
-
-menu_principal = Frame(ventana, bg="black")
-menu_principal.grid(row=0, column=0, columnspan=2, sticky="nsew")
-
-fondo_menu = Image.open("recursos/fondo_menu.png")
-fondo_menu = fondo_menu.resize((660, 660), Image.LANCZOS)
-fondo_menu = ImageTk(fondo_menu)
-fondo_menu_label = Label(menu_principal, image=fondo_menu, bd=0, highlightthickness=0)
-fondo_menu_label.grid(row=0, column=0, rowspan=3)
-
-
-boton_iniciar = Button(menu_principal, text="Jugar", command=menu_login, bg="black", fg="white", font=("Unispace", 30, "bold"), border=5, relief="groove")
-boton_iniciar.grid(row=1, column=0, padx=10, pady=10, sticky="s")
-boton_salir = Button(menu_principal, text="Salir", command=ventana.quit, bg="black", fg="white", font=("Unispace", 30, "bold"), border=5, relief="groove")
-boton_salir.grid(row=2, column=0, padx=10, pady=10, sticky="n")
-
-label_username = Label(menu_principal, text="Usuario", bg="black", fg="white", font=("Unispace", 20, "bold"), relief="raised", border=5, padx=10)
-entryBox_username = Entry(menu_principal, bg="black", fg="white", font=("Unispace", 20), border=5, relief="groove")
-label_password = Label(menu_principal, text="Contraseña", bg="black", fg="white", font=("Unispace", 20, "bold"), relief="raised", border=5, padx=10)
-entryBox_password = Entry(menu_principal, show="*", bg="black", fg="white", font=("Unispace", 20), border=5, relief="groove")
-boton_iniciar_sesion = Button(menu_principal, text="Iniciar Sesión", command=iniciar_sesion, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
-boton_registrarse = Button(menu_principal, text="Registrarse", command=registrar_usuario, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
-
 def mostrar_pantalla_perdio():
-    # Crear un frame superpuesto
     frame_perdio = Frame(frame_tetris, bg="black")
     frame_perdio.place(relx=0, rely=0, relwidth=1, relheight=1)
 
-    # Mensaje de que perdió
     label_perdio = Label(
         frame_perdio,
         text="Skill Issue",
@@ -879,7 +872,6 @@ def mostrar_pantalla_perdio():
     )
     label_perdio.pack(pady=60)
 
-    # Botón para jugar otra vez
     def jugar_otra_vez():
         frame_perdio.destroy()
         reiniciar_juego()
@@ -902,7 +894,6 @@ def mostrar_pantalla_perdio():
 
         ventana.quit()
 
-    # Botón para salir
     boton_salir_perdio = Button(
         frame_perdio,
         text="Salir",
@@ -915,14 +906,71 @@ def mostrar_pantalla_perdio():
     )
     boton_salir_perdio.pack(pady=10)
 
+def eliminar_obstaculos():
+    global matriz, cubos, ultimo_retroceso, veces_retroceso
+    tiempo_actual = time.time()
+    if tiempo_actual - ultimo_retroceso < 0.5:
+        veces_retroceso += 1
+    else:
+        veces_retroceso = 1
+    ultimo_retroceso = tiempo_actual
+
+    if veces_retroceso >= 3:
+        for fila in range(1, 21):
+            for columna in range(1, 11):
+                if matriz[fila][columna] == 1:
+                    matriz[fila][columna] = 0
+                    eliminar_cubo(fila, columna)
+
+def bindings_inicio():
+    ventana.bind("<Escape>", lambda e: toggle_pausa())
+    ventana.bind("<space>", lambda e: toggle_pausa())
+    ventana.bind("<BackSpace>", lambda e: eliminar_obstaculos())
+
+# GUI
+frame_tetris = Frame(ventana, bg="black")
+fondo = Label(frame_tetris, image=fondo_juego, bd=0, highlightthickness=0)
+frame_stats = Frame(ventana, bg="black")
+puntuacion = Label(frame_stats, text=f"Puntuación Actual: {puntuacion_actual}pts", bg="black",fg="white", font=("Arial", 16, "bold"))
+frame_leaderboard = Frame(frame_stats, bg="black", border=5, relief="groove")
+label_top_10 = Label(frame_leaderboard, text="Top 10 jugadores", bg="black", fg="white", font=("Arial", 14, "bold"))
+pausa = Button(frame_stats, text="Iniciar Juego", command=toggle_pausa, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
+guardar = Button(frame_stats, text="Guardar y salir", command=guardar_y_salir, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
+menu_principal = Frame(ventana, bg="black")
+fondo_menu_label = Label(menu_principal, image=fondo_menu, bd=0, highlightthickness=0)
+boton_iniciar = Button(menu_principal, text="Jugar", command=menu_login, bg="black", fg="white", font=("Unispace", 30, "bold"), border=5, relief="groove")
+boton_salir = Button(menu_principal, text="Salir", command=ventana.quit, bg="black", fg="white", font=("Unispace", 30, "bold"), border=5, relief="groove")
+label_username = Label(menu_principal, text="Usuario", bg="black", fg="white", font=("Unispace", 20, "bold"), relief="raised", border=5, padx=10)
+entryBox_username = Entry(menu_principal, bg="black", fg="white", font=("Unispace", 20), border=5, relief="groove")
+label_password = Label(menu_principal, text="Contraseña", bg="black", fg="white", font=("Unispace", 20, "bold"), relief="raised", border=5, padx=10)
+entryBox_password = Entry(menu_principal, show="*", bg="black", fg="white", font=("Unispace", 20), border=5, relief="groove")
+boton_iniciar_sesion = Button(menu_principal, text="Iniciar Sesión", command=iniciar_sesion, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
+boton_registrarse = Button(menu_principal, text="Registrarse", command=registrar_usuario, bg="black", fg="white", font=("Unispace", 16, "bold"), border=5, relief="groove")
+
+# Grids
+frame_tetris.grid(row=0, column=0)
+fondo.grid(row=0, column=0, rowspan=22, columnspan=12)
+frame_stats.grid(row=0, column=1, sticky="nsew")
+frame_stats.grid_rowconfigure(0, weight=0)
+frame_stats.grid_columnconfigure(0, weight=1)
+puntuacion.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+frame_leaderboard.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
+frame_leaderboard.grid_columnconfigure(0, weight=1)
+label_top_10.grid(row=0, column=0, padx=5, pady=5, sticky="we")
+pausa.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
+guardar.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
+menu_principal.grid(row=0, column=0, columnspan=2, sticky="nsew")
+fondo_menu_label.grid(row=0, column=0, rowspan=3)
+boton_iniciar.grid(row=1, column=0, padx=10, pady=10, sticky="s")
+boton_salir.grid(row=2, column=0, padx=10, pady=10, sticky="n")
+
+# Variables que requieren de la GUI para ser inicializadas
+jugadores = {}
+leaderboard_data = [["Por definir", 0] for _ in range(10)]
 for i in range(10):
     jugadores[f"{i}"] = Label(frame_leaderboard, text=f"{i+1}. Por definir: 0pts", bg="black", fg="white", font=("Arial", 12))
     jugadores[f"{i}"].grid(row=i+1, column=0, padx=5, pady=5, sticky="w")
-# Inicialización
-scores = {}
-usuario = ""
-archivo_juego = ""
+
+# iniciar el juego
 desactivar_controles()
-
-
-frame_tetris.mainloop()
+ventana.mainloop()
