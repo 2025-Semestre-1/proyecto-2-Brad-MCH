@@ -3,7 +3,7 @@ from PIL.ImageTk import PhotoImage as ImageTk
 from PIL import Image
 import random
 from os import system
-
+import time
 
 
 system("cls")
@@ -70,7 +70,7 @@ def reiniciar_matriz():
 
 def cargar_partida():
     global puntuacion_actual
-    partida_data = open(f"data/data_partidas/{archivo_juego}.txt", "r")
+    partida_data = open(f"data/data_partidas/{archivo_juego}", "r")
     partida_lines = partida_data.readlines()
     partida_data.close()
     partida_lines = [linea.strip().split() for linea in partida_lines]
@@ -168,13 +168,27 @@ for i, color in enumerate(colores):
 
 estado_juego = False
 controles_juego = False
-
+ultimo_movimiento = 0
+ultimo_rotar = 0
+debounce_tiempo = 0.1
 
 # --- Funciones auxiliares ---
 
 def imprimir_matriz():
     for fila in matriz:
         print(fila)
+
+def imprimir_cubos():
+    matriz_cubos = [[0 for _ in range(12)] for _ in range(22)]
+    for fila in range(22):
+        for columna in range(12):
+            if cubos[fila][columna]:
+                matriz_cubos[fila][columna] = 1
+    for fila in matriz_cubos:
+        for columna in fila:
+            print(columna, end=" ")
+        print()    
+
 
 def abajo_limite(figura):
     for fila, columna in figura:
@@ -183,7 +197,11 @@ def abajo_limite(figura):
     return False
 
 def spawn_figura():
+    global estado_juego
+
+    desactivar_controles()
     fila_llena()
+    activar_controles()
 
     for linea in range(22):
         for columna in range(12):
@@ -202,6 +220,7 @@ def spawn_figura():
     for posicion in posiciones_iniciales[figura_aleatoria]:
         fila, columna = posicion
         if matriz[fila][columna] not in [0, "A"]:
+            estado_juego = False
             return perdio()
             
 
@@ -234,6 +253,8 @@ def mover(x, y):
 
     for fila, columna in nueva_posicion:
         if matriz[fila][columna] not in [0, "A"]:
+            nueva_posicion = posicion_vieja
+            posicion_vieja = []
             return
 
     for fila, columna in posicion_vieja:
@@ -257,8 +278,10 @@ def mover(x, y):
             roto = False
     if roto:
         eje_de_rotacion = (eje_de_rotacion[0] + x, eje_de_rotacion[1] + y)
+    
 
     if abajo_limite(nueva_posicion):
+        
         return spawn_figura()
 
 def eliminar_cubo(fila, columna):
@@ -267,17 +290,28 @@ def eliminar_cubo(fila, columna):
         cubos[fila][columna] = None 
 
 def rotar():
-    
-    if figura_aleatoria in ["O", "+"]: # Estas figuras no rotan visualmente
+    global ultimo_movimiento
+    tiempo_actual = time.time()
+
+    if tiempo_actual - ultimo_movimiento < debounce_tiempo:
+        ventana.update()
+        return
+
+    ultimo_movimiento = tiempo_actual
+
+    if figura_aleatoria in ["O", "+"]:
         return 
 
     global vieja_figura
     nueva_figura = []
     figura = []
-    for i in range(len(matriz)):
-        for j in range(len(matriz[i])):
+    
+    posicion_actual = []
+    for i in range(22):
+        for j in range(12):
             if matriz[i][j] == "A":
-                figura.append(((i, j), (abs(i - eje_de_rotacion[0]), abs(j - eje_de_rotacion[1]))))
+                figura += [((i, j), (abs(i - eje_de_rotacion[0]), abs(j - eje_de_rotacion[1])))]
+                posicion_actual += [(i, j)]  
 
     for (i, j), (x, y) in figura:  
 
@@ -312,15 +346,11 @@ def rotar():
         
         if matriz[fila][columna] not in [0, "A"]:
             return
-    
-    for fila, columna in nueva_posicion:
+
+    for fila, columna in posicion_actual:
         if matriz[fila][columna] == "A":
             matriz[fila][columna] = 0
             eliminar_cubo(fila, columna)
-
-    for fila, columna in vieja_figura:
-        matriz[fila][columna] = 0
-        eliminar_cubo(fila, columna)
 
     for fila, columna in nueva_figura:
         matriz[fila][columna] = "A"
@@ -337,9 +367,16 @@ def bajar_automaticamente():
     if not estado_juego:
         desactivar_controles()
         return frame_tetris.after(500, bajar_automaticamente)
-    mover(1, 0)  # Mueve la figura hacia abajo
+
+    aumento_velocidad = puntuacion_actual // 200
+    velocidad = 500 - aumento_velocidad * 50
+
+    if velocidad < 100:
+        velocidad = 100
+
+    mover(1, 0)  
     activar_controles()
-    frame_tetris.after(500, bajar_automaticamente)  # Llama a esta función nuevamente después de 500 ms
+    frame_tetris.after(velocidad, bajar_automaticamente)  
     
 puntuacion_actual = 0
 def fila_llena():
@@ -372,7 +409,9 @@ def bajar_figuras(fila_destruida):
 
 def inicio():
     cargar_partida()
+    desactivar_controles()
     spawn_figura()
+    activar_controles()
     frame_tetris.after(1000, bajar_automaticamente)
 
 def iniciar_juego():
@@ -488,7 +527,6 @@ def cargar_leaderboard():
     for i in range(10):
         if len_listas(scores) > 0:
             usuario_maximo, maximo_puntaje, indice = maximo(scores)
-            print(f"Iteración {i}: {usuario_maximo}, {maximo_puntaje}")
             scores.pop(indice)
             leaderboard_data[i] = [usuario_maximo, maximo_puntaje]
             jugadores[f"{i}"].config(text=f"{i+1}. {usuario_maximo}: {maximo_puntaje}pts")
@@ -498,13 +536,18 @@ def cargar_leaderboard():
             leaderboard_data[i][1] = 0
             jugadores[f"{i}"].config(text=f"{i+1}. Por definir: 0pts")
 
-def usuario_existe(usuario):
+def usuario_existe(usuario_):
+    global usuario
+    global archivo_juego
     data = open("data/user_data.txt", "r")
     data_lines = data.readlines()
     data.close()
 
     for linea in data_lines:
-        if linea.split()[0] == usuario:
+        if linea.strip() == "":
+            continue
+        
+        if linea.split()[0] == usuario_:
             return True
     return False
 
@@ -529,6 +572,9 @@ def registrar_usuario():
     if usuario_existe(username):
         return error_usuario_existente()
     
+    usuario = username
+    archivo_juego = username + ".txt"
+
     data = open("data/user_data.txt", "a")
     data.write(f"{username} {password} 0 {username}.txt\n")
     data.close()
@@ -619,7 +665,6 @@ def desactivar_controles():
         ventana.unbind("<D>")
         ventana.unbind("<s>")
         ventana.unbind("<S>")
-        print("Controles desactivados")
 
 def activar_controles():
     ventana.bind("<Left>", lambda e: mover(0, -1))
@@ -636,7 +681,6 @@ def activar_controles():
     ventana.bind("<D>", lambda e: mover(0, 1))
     ventana.bind("<s>", lambda e: mover(1, 0))
     ventana.bind("<S>", lambda e: mover(1, 0))
-    print("Controles activados")
 
 def crear_matriz_para_guardar():
     matriz_guardar = [[0 for _ in range(12)] for _ in range(22)]
@@ -828,7 +872,7 @@ def mostrar_pantalla_perdio():
     # Mensaje de que perdió
     label_perdio = Label(
         frame_perdio,
-        text="¡Skill Issue!",
+        text="Skill Issue",
         bg="black",
         fg="red",
         font=("Unispace", 32, "bold")
@@ -878,7 +922,7 @@ for i in range(10):
 scores = {}
 usuario = ""
 archivo_juego = ""
-
+desactivar_controles()
 
 
 frame_tetris.mainloop()
