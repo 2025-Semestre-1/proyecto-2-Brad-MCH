@@ -224,13 +224,15 @@ def spawn_figura():
             estado_juego = False
             return perdio()
             
-
     for posicion in posiciones_iniciales[figura_aleatoria]:
         fila, columna = posicion
         matriz[fila][columna] = "A"
         cubo = Label(frame_tetris, image=color_aleatorio, bd=0, highlightthickness=0)
         cubo.grid(row=fila, column=columna)
         cubos[fila][columna] = cubo
+
+    if abajo_limite(posiciones_iniciales[figura_aleatoria]):
+        return spawn_figura()
 
 def imprimir_figura(posiciones, color):
     for posicion in posiciones:
@@ -282,7 +284,6 @@ def mover(x, y):
     
 
     if abajo_limite(nueva_posicion):
-        
         return spawn_figura()
 
 def eliminar_cubo(fila, columna):
