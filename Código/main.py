@@ -863,6 +863,9 @@ def crear_matriz_para_el_profe():
 def mostrar_pantalla_perdio():
     frame_perdio = Frame(frame_tetris, bg="black")
     frame_perdio.place(relx=0, rely=0, relwidth=1, relheight=1)
+    guardar.config(state="disabled")
+    pausa.config(state="disabled")
+    
 
     label_perdio = Label(
         frame_perdio,
@@ -874,6 +877,8 @@ def mostrar_pantalla_perdio():
     label_perdio.pack(pady=60)
 
     def jugar_otra_vez():
+        guardar.config(state="normal")
+        pausa.config(state="normal")
         frame_perdio.destroy()
         reiniciar_juego()
 
@@ -892,7 +897,9 @@ def mostrar_pantalla_perdio():
     def salir_perdio():
         data_usuario = open(f"data/data_partidas/{usuario}.txt", "w")
         data_usuario.close()
-
+        data_profe = open(f"data/matrices_Profe/{usuario}.txt", "w")
+        data_profe.close()
+        actualizar_user_data()
         ventana.quit()
 
     boton_salir_perdio = Button(
